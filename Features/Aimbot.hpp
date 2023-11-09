@@ -189,6 +189,16 @@ struct Aimbot {
         // Is aim enabled
         if (!AimbotEnabled) { ReleaseTarget(); return 0; }
 
+        // FOV changes if we are zoomed or not
+        if (Myself->IsZooming) {
+            FinalFOV = ZoomFOV;
+            FinalDistance = ZoomDistance;
+        }
+        else {
+            FinalFOV = HipfireFOV;
+            FinalDistance = HipfireDistance;
+        }
+
         // Is aim key pressed
         if (
             !X11Display->KeyDown(XK_Caps_Lock) && 
@@ -212,16 +222,6 @@ struct Aimbot {
             TargetSelected = true;
         }
         
-        // FOV changes if we are zoomed or not
-        if (Myself->IsZooming) {
-            FinalFOV = ZoomFOV;
-            FinalDistance = ZoomDistance;
-        }
-        else {
-            FinalFOV = HipfireFOV;
-            FinalDistance = HipfireDistance;
-        }
-
         // Is target in FOV
         double DistanceFromCrosshair = CalculateDistanceFromCrosshair(CurrentTarget);
         if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1) {
