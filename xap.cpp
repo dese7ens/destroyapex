@@ -116,6 +116,10 @@ void LoadConfig() {
     AimAssist->HipfireDistance = Config::Aimbot::HipfireDistance;
     AimAssist->ZoomDistance = Config::Aimbot::ZoomDistance;
 
+    AimAssist->NoRecoilEnabled = Config::NoRecoil::RCSEnabled;
+    AimAssist->PitchMultiplier = Config::NoRecoil::Pitch;
+    AimAssist->YawMultiplier = Config::NoRecoil::Yaw;
+
     // ESP //
     ESP->GlowEnabled = Config::Glow::Enabled;
     ESP->ItemGlow = Config::Glow::ItemGlow;

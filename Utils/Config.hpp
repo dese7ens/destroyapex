@@ -23,6 +23,8 @@ constexpr char ConfigFile[] = "config.ini";
 namespace Config {
     namespace Aimbot {
         bool Enabled = true;
+        bool WWhenAttack = true;
+        bool WInScope = true;
         bool AllowTargetSwitch = true;
         bool PredictMovement = true;
         bool PredictBulletDrop = true;
@@ -36,7 +38,13 @@ namespace Config {
         float HipfireDistance = 200;
         float ZoomDistance = 200;
     };
-
+    
+    namespace NoRecoil {
+        bool RCSEnabled = true;
+        int Pitch = 20;
+        int Yaw = 14;  
+    };
+    
     namespace Glow {
         bool Enabled = true;
         bool ItemGlow = true;
@@ -57,6 +65,8 @@ void UpdateConfig() {
     if (conf.is_open()) {
         WriteSection(Aimbot);
         WritePair(Aimbot, Enabled);
+        WritePair(Aimbot, WWhenAttack);
+        WritePair(Aimbot, WInScope);
         WritePair(Aimbot, AllowTargetSwitch);
         WritePair(Aimbot, PredictMovement);
         WritePair(Aimbot, PredictBulletDrop);
@@ -69,6 +79,12 @@ void UpdateConfig() {
         WritePair(Aimbot, MinDistance);
         WritePair(Aimbot, HipfireDistance);
         WritePair(Aimbot, ZoomDistance);
+        WriteSectionEnd();
+        
+        WriteSection(NoRecoil);
+        WritePair(NoRecoil, RCSEnabled);
+        WritePair(NoRecoil, Pitch);
+        WritePair(NoRecoil, Yaw);
         WriteSectionEnd();
 
         WriteSection(Glow);
@@ -96,6 +112,8 @@ bool ReadConfig(const std::string &configFile) {
     }
     
     ReadBool(Aimbot, Enabled);
+    ReadBool(Aimbot, WWhenAttack);
+    ReadBool(Aimbot, WInScope);
     ReadBool(Aimbot, AllowTargetSwitch);
     ReadBool(Aimbot, PredictMovement);
     ReadBool(Aimbot, PredictBulletDrop);
@@ -108,6 +126,10 @@ bool ReadConfig(const std::string &configFile) {
     ReadFloat(Aimbot, MinDistance);
     ReadFloat(Aimbot, HipfireDistance);
     ReadFloat(Aimbot, ZoomDistance);
+    
+    ReadBool(NoRecoil, RCSEnabled);
+    ReadInt(NoRecoil, Pitch);
+    ReadInt(NoRecoil, Yaw);
 
     ReadBool(Glow, Enabled);
     ReadBool(Glow, ItemGlow);

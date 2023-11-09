@@ -23,12 +23,19 @@
 
 struct Aimbot {
     bool AimbotEnabled = true;
+    bool NoRecoilEnabled = true;
     bool AllowTargetSwitch = true;
+
+    bool WWhenAttack = true;
+    bool WInScope = true;
 
     bool PredictMovement = true;
     bool PredictBulletDrop = true;
 
     HitboxType Hitbox = HitboxType::UpperChest;
+    
+    float PitchMultiplier = 20;
+    float YawMultiplier = 14;
 
     float FinalDistance = 0;
     float FinalFOV = 0;
@@ -49,6 +56,8 @@ struct Aimbot {
     Player* CurrentTarget = nullptr;
     bool TargetSelected = true;
 
+    Vector2D previous_weaponPunchAngles;
+
     Aimbot(XDisplay* X11Display, LocalPlayer* Myself, std::vector<Player*>* GamePlayers) {
         this->X11Display = X11Display;
         this->Myself = Myself;
@@ -57,13 +66,23 @@ struct Aimbot {
 
     void RenderUI() {
         if (ImGui::BeginTabItem("Aim", nullptr, ImGuiTabItemFlags_NoCloseWithMiddleMouseButton | ImGuiTabItemFlags_NoReorder)) {
-            ImGui::Checkbox("Aim - Assist", &AimbotEnabled);
+            ImGui::Checkbox("Aim", &AimbotEnabled);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Toggle the Aim-Assist");
             ImGui::SameLine();
-            ImGui::Checkbox("Allow Target Switch", &AllowTargetSwitch);
+            ImGui::Checkbox("No recoil", &NoRecoilEnabled);
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("Toggle the NoRecoil");
+            ImGui::SameLine();
+            ImGui::Checkbox("Allow target switch", &AllowTargetSwitch);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Allow switching Target when current target no longer meets requirements");
+            
+            ImGui::Separator();
+
+            ImGui::Checkbox("Aim when attack", &WWhenAttack);
+            ImGui::SameLine();
+            ImGui::Checkbox("Aim in ADS", &WInScope);
 
             ImGui::Separator();
 
@@ -74,13 +93,22 @@ struct Aimbot {
             ImGui::Checkbox("Predict Bullet Drop", &PredictBulletDrop);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Predict weapon's bullet drop");
-
+            
             ImGui::Separator();
 
             const char* HitboxTypes[] = { "Head", "Neck", "Upper Chest", "Lower Chest", "Stomach", "Hip" };
             int HitboxTypeIndex = static_cast<int>(Hitbox);
             ImGui::Combo("Hitbox Type", &HitboxTypeIndex, HitboxTypes, IM_ARRAYSIZE(HitboxTypes));
             Hitbox = static_cast<HitboxType>(HitboxTypeIndex);
+
+            ImGui::Separator();
+
+            ImGui::SliderFloat("Pitch multiplier", &PitchMultiplier, 1, 100, "%.0f");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("Y RCS factor");
+            ImGui::SliderFloat("Yaw multiplier", &YawMultiplier, 1, 100, "%.0f");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("X RCS factor");
 
             ImGui::Separator();
 
@@ -122,6 +150,8 @@ struct Aimbot {
     bool Save() {
         try {
             Config::Aimbot::Enabled = AimbotEnabled;
+            Config::Aimbot::WWhenAttack = WWhenAttack;
+            Config::Aimbot::WInScope = WInScope;
             Config::Aimbot::AllowTargetSwitch = AllowTargetSwitch;
             Config::Aimbot::PredictMovement = PredictMovement;
             Config::Aimbot::PredictBulletDrop = PredictBulletDrop;
@@ -134,6 +164,9 @@ struct Aimbot {
             Config::Aimbot::MinDistance = MinDistance;
             Config::Aimbot::HipfireDistance = HipfireDistance;
             Config::Aimbot::ZoomDistance = ZoomDistance;
+            Config::NoRecoil::RCSEnabled = NoRecoilEnabled;
+            Config::NoRecoil::Pitch = PitchMultiplier;
+            Config::NoRecoil::Yaw = YawMultiplier;
             return true;
         } catch (...) {
             return false;
@@ -141,8 +174,45 @@ struct Aimbot {
     }
 
     void Update() {
-        if (!AimbotEnabled) { ReleaseTarget(); return; }
+        // Are we knocked?
+        if (!Myself->IsCombatReady()) { TargetSelected = false; return; }
 
+        // If aim is disabled / target out of FOV //
+        if (!AimRCS()) RCS();
+
+        //std::cout << "X " << Myself->SelfAbsVelocity.x << std::endl;
+        //std::cout << "Y " << Myself->SelfAbsVelocity.y << std::endl;
+        //std::cout << "Z " << Myself->SelfAbsVelocity.z << std::endl;
+    }
+
+    bool AimRCS() {
+        // Is aim enabled
+        if (!AimbotEnabled) { ReleaseTarget(); return 0; }
+
+        // Is aim key pressed
+        if (
+            !X11Display->KeyDown(XK_Caps_Lock) && 
+            !(Myself->IsInAttack && WWhenAttack) &&
+            !(Myself->IsZooming && WInScope)) { ReleaseTarget(); return 0; }
+
+        // Get target
+        Player* Target = CurrentTarget;
+        if (!IsValidTarget(Target)) {
+            if(TargetSelected && !AllowTargetSwitch)
+                return 0;
+
+            Target = FindBestTarget();
+            if (!IsValidTarget(Target)) {
+                CurrentTarget = nullptr;
+                return 0;
+            }
+            
+            CurrentTarget = Target;
+            CurrentTarget->IsLockedOn = true;
+            TargetSelected = true;
+        }
+        
+        // FOV changes if we are zoomed or not
         if (Myself->IsZooming) {
             FinalFOV = ZoomFOV;
             FinalDistance = ZoomDistance;
@@ -152,39 +222,22 @@ struct Aimbot {
             FinalDistance = HipfireDistance;
         }
 
-        if (!Myself->IsCombatReady()) { TargetSelected = false; return; }
-        if (!X11Display->KeyDown(XK_Shift_L) && !Myself->IsInAttack) { ReleaseTarget(); return; }
-
-        Player* Target = CurrentTarget;
-        if (!IsValidTarget(Target)) {
-            if(TargetSelected && !AllowTargetSwitch)
-                return;
-
-            Target = FindBestTarget();
-            if (!IsValidTarget(Target)) {
-                CurrentTarget = nullptr;
-                return;
-            }
-            
-            CurrentTarget = Target;
-            CurrentTarget->IsLockedOn = true;
-            TargetSelected = true;
-        }
-
-        // Where the fun begins //
+        // Is target in FOV
         double DistanceFromCrosshair = CalculateDistanceFromCrosshair(CurrentTarget);
         if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1) {
             ReleaseTarget();
-            return;
+            return 0;
         }
-        StartAiming();
-    }
 
-    void StartAiming() {
+        // No recoil calcs
+        int nrPitchIncrement = 0;
+        int nrYawIncrement = 0;
+        controlWeapon(nrPitchIncrement, nrYawIncrement);
+
         // Get Target Angle
         QAngle DesiredAngles = QAngle(0, 0);
         if (!GetAngle(CurrentTarget, DesiredAngles))
-            return;
+            return 0;
 
         // Calculate Increment
         Vector2D DesiredAnglesIncrement = Vector2D(CalculatePitchIncrement(DesiredAngles), CalculateYawIncrement(DesiredAngles));
@@ -193,13 +246,10 @@ struct Aimbot {
         float Extra = ExtraSmooth / CurrentTarget->DistanceToLocalPlayer;
         float TotalSmooth = Smooth + Extra;
 
-        // No recoil calcs
-        Vector2D punchAnglesDiff = Myself->PunchAnglesDifferent.Divide(Smooth).Multiply(Speed);
-        double nrPitchIncrement = punchAnglesDiff.x;
-        double nrYawIncrement = -punchAnglesDiff.y;
-
         // Aimbot calcs
-        Vector2D aimbotDelta = DesiredAnglesIncrement.Divide(TotalSmooth).Multiply(Speed);
+        Vector2D aimbotDelta = DesiredAnglesIncrement
+            .Divide(TotalSmooth)
+            .Multiply(Speed);
         double aimYawIncrement = aimbotDelta.y * -1;
         double aimPitchIncrement = aimbotDelta.x;
 
@@ -212,8 +262,46 @@ struct Aimbot {
         int totalYawIncrementInt = RoundHalfEven(AL1AF0(totalYawIncrement));
 
         // Move Mouse
-        if (totalPitchIncrementInt == 0 && totalYawIncrementInt == 0) return;
+        if (totalPitchIncrementInt == 0 && totalYawIncrementInt == 0) return 0;
         X11Display->MoveMouse(totalPitchIncrementInt, totalYawIncrementInt);
+        return 1;
+    }
+
+    void RCS() {
+        // Calculate RCS
+        int nrPitchIncrement = 0;
+        int nrYawIncrement = 0;
+        controlWeapon(nrPitchIncrement, nrYawIncrement);
+
+        // MoveMouse
+        if (nrPitchIncrement == 0 && nrYawIncrement == 0) return;
+        X11Display->MoveMouse(nrPitchIncrement, nrYawIncrement);
+    }
+
+    void controlWeapon(int &rcsPitch, int &rcsYaw) {
+        if (!NoRecoilEnabled) return;
+
+        int weaponId = Myself->WeaponIndex;
+
+        if (
+            weaponId == 102 ||
+            weaponId == 86 ||
+            weaponId == 95 ||
+            weaponId == 94 ||
+            weaponId == 108 ||
+            weaponId == 110 ||
+            weaponId == 2
+        ) return;
+        
+        if (!Myself->IsInAttack) return;
+        Vector2D punchAnglesDiff = Myself->PunchAnglesDifferent;
+        if (punchAnglesDiff.IsZeroVector()){ 
+            return;
+        }
+        rcsPitch = (punchAnglesDiff.x > 0)
+            ? RoundHalfEven(punchAnglesDiff.x * PitchMultiplier)
+            : 0;
+        rcsYaw = RoundHalfEven(-punchAnglesDiff.y * YawMultiplier);
     }
 
     bool GetAngle(const Player* Target, QAngle& Angle) {
@@ -229,7 +317,7 @@ struct Aimbot {
 
     bool GetAngleToTarget(const Player* Target, QAngle& Angle) const {
         const Vector3D TargetPosition = Target->GetBonePosition(Hitbox);
-        const Vector3D TargetVelocity = Target->AbsoluteVelocity;
+        const Vector3D TargetVelocity = Target->AbsoluteVelocity.Subtract(Myself->SelfAbsVelocity);
         const Vector3D CameraPosition = Myself->CameraPosition;
         const QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
         

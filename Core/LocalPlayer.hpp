@@ -15,6 +15,7 @@ struct LocalPlayer {
     int Team;
     Vector3D LocalOrigin;
     Vector3D CameraPosition;
+    Vector3D SelfAbsVelocity;
 
     Vector2D ViewAngles;
     Vector2D PunchAngles;
@@ -40,6 +41,7 @@ struct LocalPlayer {
 
         Team = Memory::Read<int>(BasePointer + OFF_TEAM_NUMBER);
         LocalOrigin = Memory::Read<Vector3D>(BasePointer + OFF_LOCAL_ORIGIN);
+        SelfAbsVelocity = Memory::Read<Vector3D>(BasePointer + OFF_ABSVELOCITY);
         CameraPosition = Memory::Read<Vector3D>(BasePointer + OFF_CAMERAORIGIN);
         ViewAngles = Memory::Read<Vector2D>(BasePointer + OFF_VIEW_ANGLES);
         PunchAngles = Memory::Read<Vector2D>(BasePointer + OFF_PUNCH_ANGLES);
