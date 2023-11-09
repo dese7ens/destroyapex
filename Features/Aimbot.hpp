@@ -317,7 +317,7 @@ struct Aimbot {
 
     bool GetAngleToTarget(const Player* Target, QAngle& Angle) const {
         const Vector3D TargetPosition = Target->GetBonePosition(Hitbox);
-        const Vector3D TargetVelocity = Target->AbsoluteVelocity.Subtract(Myself->SelfAbsVelocity);
+        const Vector3D TargetVelocity = Target->AbsoluteVelocity;
         const Vector3D CameraPosition = Myself->CameraPosition;
         const QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
         
