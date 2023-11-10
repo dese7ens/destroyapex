@@ -40,7 +40,7 @@ unknowncheats: basic knowledge and offsets
 **3. Clone repo**
 
     git clone https://github.com/Whonermey/xap-client-modified.git
-    cd xap-client
+    cd xap-client-modified
 
 **4. Build and Run**
 
