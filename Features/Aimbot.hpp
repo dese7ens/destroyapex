@@ -178,16 +178,16 @@ struct Aimbot {
         if (!Myself->IsCombatReady()) { TargetSelected = false; return; }
 
         // If aim is disabled / target out of FOV //
-        if (!AimRCS()) RCS();
-
+        Aim();
+        RCS();
         //std::cout << "X " << Myself->SelfAbsVelocity.x << std::endl;
         //std::cout << "Y " << Myself->SelfAbsVelocity.y << std::endl;
         //std::cout << "Z " << Myself->SelfAbsVelocity.z << std::endl;
     }
 
-    bool AimRCS() {
+    void Aim() {
         // Is aim enabled
-        if (!AimbotEnabled) { ReleaseTarget(); return 0; }
+        if (!AimbotEnabled) { ReleaseTarget(); return; }
 
         // FOV changes if we are zoomed or not
         if (Myself->IsZooming) {
@@ -203,18 +203,18 @@ struct Aimbot {
         if (
             !X11Display->KeyDown(XK_Caps_Lock) && 
             !(Myself->IsInAttack && WWhenAttack) &&
-            !(Myself->IsZooming && WInScope)) { ReleaseTarget(); return 0; }
+            !(Myself->IsZooming && WInScope)) { ReleaseTarget(); return; }
 
         // Get target
         Player* Target = CurrentTarget;
         if (!IsValidTarget(Target)) {
             if(TargetSelected && !AllowTargetSwitch)
-                return 0;
+                return;
 
             Target = FindBestTarget();
             if (!IsValidTarget(Target)) {
                 CurrentTarget = nullptr;
-                return 0;
+                return;
             }
             
             CurrentTarget = Target;
@@ -226,18 +226,13 @@ struct Aimbot {
         double DistanceFromCrosshair = CalculateDistanceFromCrosshair(CurrentTarget);
         if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1) {
             ReleaseTarget();
-            return 0;
+            return;
         }
-
-        // No recoil calcs
-        int nrPitchIncrement = 0;
-        int nrYawIncrement = 0;
-        controlWeapon(nrPitchIncrement, nrYawIncrement);
 
         // Get Target Angle
         QAngle DesiredAngles = QAngle(0, 0);
         if (!GetAngle(CurrentTarget, DesiredAngles))
-            return 0;
+            return;
 
         // Calculate Increment
         Vector2D DesiredAnglesIncrement = Vector2D(CalculatePitchIncrement(DesiredAngles), CalculateYawIncrement(DesiredAngles));
@@ -253,32 +248,16 @@ struct Aimbot {
         double aimYawIncrement = aimbotDelta.y * -1;
         double aimPitchIncrement = aimbotDelta.x;
 
-        // Combine
-        double totalPitchIncrement = aimPitchIncrement + nrPitchIncrement;
-        double totalYawIncrement = aimYawIncrement + nrYawIncrement;
-
         // Turn into integers
-        int totalPitchIncrementInt = RoundHalfEven(AL1AF0(totalPitchIncrement));
-        int totalYawIncrementInt = RoundHalfEven(AL1AF0(totalYawIncrement));
+        int totalPitchIncrementInt = RoundHalfEven(AL1AF0(aimPitchIncrement));
+        int totalYawIncrementInt = RoundHalfEven(AL1AF0(aimYawIncrement));
 
         // Move Mouse
-        if (totalPitchIncrementInt == 0 && totalYawIncrementInt == 0) return 0;
+        if (totalPitchIncrementInt == 0 && totalYawIncrementInt == 0) return;
         X11Display->MoveMouse(totalPitchIncrementInt, totalYawIncrementInt);
-        return 1;
     }
 
     void RCS() {
-        // Calculate RCS
-        int nrPitchIncrement = 0;
-        int nrYawIncrement = 0;
-        controlWeapon(nrPitchIncrement, nrYawIncrement);
-
-        // MoveMouse
-        if (nrPitchIncrement == 0 && nrYawIncrement == 0) return;
-        X11Display->MoveMouse(nrPitchIncrement, nrYawIncrement);
-    }
-
-    void controlWeapon(int &rcsPitch, int &rcsYaw) {
         if (!NoRecoilEnabled) return;
 
         int weaponId = Myself->WeaponIndex;
@@ -295,13 +274,12 @@ struct Aimbot {
         
         if (!Myself->IsInAttack) return;
         Vector2D punchAnglesDiff = Myself->PunchAnglesDifferent;
-        if (punchAnglesDiff.IsZeroVector()){ 
-            return;
-        }
-        rcsPitch = (punchAnglesDiff.x > 0)
+        if (punchAnglesDiff.IsZeroVector()){ return; }
+        int rcsPitch = (punchAnglesDiff.x > 0)
             ? RoundHalfEven(punchAnglesDiff.x * PitchMultiplier)
             : 0;
-        rcsYaw = RoundHalfEven(-punchAnglesDiff.y * YawMultiplier);
+        int rcsYaw = RoundHalfEven(-punchAnglesDiff.y * YawMultiplier);
+        X11Display->MoveMouse(rcsPitch, rcsYaw);
     }
 
     bool GetAngle(const Player* Target, QAngle& Angle) {
