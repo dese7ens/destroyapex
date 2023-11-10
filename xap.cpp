@@ -105,10 +105,19 @@ void LoadConfig() {
 
     // Aimbot //
     AimAssist->AimbotEnabled = Config::Aimbot::Enabled;
+    AimAssist->NoRecoilEnabled = Config::Aimbot::RCSEnabled;
+
     AimAssist->AllowTargetSwitch = Config::Aimbot::AllowTargetSwitch;
+    AimAssist->stopOut = Config::Aimbot::stopOut;
+
     AimAssist->PredictMovement = Config::Aimbot::PredictMovement;
     AimAssist->PredictBulletDrop = Config::Aimbot::PredictBulletDrop;
+
     AimAssist->Hitbox = static_cast<HitboxType>(Config::Aimbot::Hitbox);
+
+    AimAssist->PitchMultiplier = Config::Aimbot::Pitch;
+    AimAssist->YawMultiplier = Config::Aimbot::Yaw;
+
     AimAssist->deadZone = Config::Aimbot::deadZone;
     AimAssist->Smooth = Config::Aimbot::Smooth;
     AimAssist->ExtraSmooth = Config::Aimbot::ExtraSmooth;
@@ -117,10 +126,6 @@ void LoadConfig() {
     AimAssist->MinDistance = Config::Aimbot::MinDistance;
     AimAssist->HipfireDistance = Config::Aimbot::HipfireDistance;
     AimAssist->ZoomDistance = Config::Aimbot::ZoomDistance;
-
-    AimAssist->NoRecoilEnabled = Config::NoRecoil::RCSEnabled;
-    AimAssist->PitchMultiplier = Config::NoRecoil::Pitch;
-    AimAssist->YawMultiplier = Config::NoRecoil::Yaw;
 
     // ESP //
     ESP->GlowEnabled = Config::Glow::Enabled;

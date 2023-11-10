@@ -24,7 +24,9 @@
 struct Aimbot {
     bool AimbotEnabled = true;
     bool NoRecoilEnabled = true;
+
     bool AllowTargetSwitch = true;
+    bool stopOut = false;
 
     bool WWhenAttack = true;
     bool WInScope = true;
@@ -73,10 +75,18 @@ struct Aimbot {
             ImGui::Checkbox("No recoil", &NoRecoilEnabled);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Toggle the NoRecoil");
-            ImGui::SameLine();
-            ImGui::Checkbox("Allow target switch", &AllowTargetSwitch);
+            
+            ImGui::Separator();
+
+            ImGui::Checkbox("Prevent target lock", &stopOut);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Allow switching Target when current target no longer meets requirements");
+                ImGui::SetTooltip("Stop aiming even if buttons are pressed and target out of FOV");
+            if (stopOut){
+                ImGui::SameLine();
+                ImGui::Checkbox("Allow target switch", &AllowTargetSwitch);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                    ImGui::SetTooltip("Allow switching Target when current target no longer meets requirements");
+            }
             
             ImGui::Separator();
 
@@ -150,12 +160,22 @@ struct Aimbot {
     bool Save() {
         try {
             Config::Aimbot::Enabled = AimbotEnabled;
+            Config::Aimbot::RCSEnabled = NoRecoilEnabled;
+
             Config::Aimbot::WWhenAttack = WWhenAttack;
             Config::Aimbot::WInScope = WInScope;
+
             Config::Aimbot::AllowTargetSwitch = AllowTargetSwitch;
+            Config::Aimbot::AllowTargetSwitch = AllowTargetSwitch;
+
             Config::Aimbot::PredictMovement = PredictMovement;
-            Config::Aimbot::PredictBulletDrop = PredictBulletDrop;
+            Config::Aimbot::stopOut = stopOut;
+
             Config::Aimbot::Hitbox = static_cast<int>(Hitbox);
+
+            Config::Aimbot::Pitch = PitchMultiplier;
+            Config::Aimbot::Yaw = YawMultiplier;
+
             Config::Aimbot::deadZone = deadZone;
             Config::Aimbot::Smooth = Smooth;
             Config::Aimbot::ExtraSmooth = ExtraSmooth;
@@ -164,9 +184,6 @@ struct Aimbot {
             Config::Aimbot::MinDistance = MinDistance;
             Config::Aimbot::HipfireDistance = HipfireDistance;
             Config::Aimbot::ZoomDistance = ZoomDistance;
-            Config::NoRecoil::RCSEnabled = NoRecoilEnabled;
-            Config::NoRecoil::Pitch = PitchMultiplier;
-            Config::NoRecoil::Yaw = YawMultiplier;
             return true;
         } catch (...) {
             return false;
@@ -209,6 +226,7 @@ struct Aimbot {
 
         // Get target
         Player* Target = CurrentTarget;
+
         if (!IsValidTarget(Target)) {
             if(TargetSelected && !AllowTargetSwitch)
                 return;
@@ -224,12 +242,14 @@ struct Aimbot {
             TargetSelected = true;
         }
         
-        /* Is target in FOV
-        double DistanceFromCrosshair = CalculateDistanceFromCrosshair(CurrentTarget);
-        if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1) {
-            ReleaseTarget();
-            return;
-        }*/
+        // Stop aiming if target not in FOV
+        if (stopOut){
+            double DistanceFromCrosshair = CalculateDistanceFromCrosshair(CurrentTarget);
+            if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1) {
+                ReleaseTarget();
+                return;
+            }
+        }
 
         // Get Target Angle
         QAngle DesiredAngles = QAngle(0, 0);

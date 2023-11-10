@@ -23,12 +23,22 @@ constexpr char ConfigFile[] = "config.ini";
 namespace Config {
     namespace Aimbot {
         bool Enabled = true;
+        bool RCSEnabled = true;
+
         bool WWhenAttack = true;
         bool WInScope = true;
+
         bool AllowTargetSwitch = true;
+        bool stopOut = false;
+
         bool PredictMovement = true;
         bool PredictBulletDrop = true;
+
         int Hitbox = 1;
+        
+        int Pitch = 20;
+        int Yaw = 14;  
+
         float deadZone = 1;
         float Smooth = 10;
         float ExtraSmooth = 250;
@@ -38,13 +48,7 @@ namespace Config {
         float HipfireDistance = 200;
         float ZoomDistance = 200;
     };
-    
-    namespace NoRecoil {
-        bool RCSEnabled = true;
-        int Pitch = 20;
-        int Yaw = 14;  
-    };
-    
+
     namespace Glow {
         bool Enabled = true;
         bool ItemGlow = true;
@@ -71,12 +75,22 @@ void UpdateConfig() {
     if (conf.is_open()) {
         WriteSection(Aimbot);
         WritePair(Aimbot, Enabled);
+        WritePair(Aimbot, RCSEnabled);
+
         WritePair(Aimbot, WWhenAttack);
         WritePair(Aimbot, WInScope);
+
         WritePair(Aimbot, AllowTargetSwitch);
+        WritePair(Aimbot, stopOut);
+
         WritePair(Aimbot, PredictMovement);
         WritePair(Aimbot, PredictBulletDrop);
+
         WritePair(Aimbot, Hitbox);
+
+        WritePair(Aimbot, Pitch);
+        WritePair(Aimbot, Yaw);
+
         WritePair(Aimbot, deadZone);
         WritePair(Aimbot, Smooth);
         WritePair(Aimbot, ExtraSmooth);
@@ -85,12 +99,6 @@ void UpdateConfig() {
         WritePair(Aimbot, MinDistance);
         WritePair(Aimbot, HipfireDistance);
         WritePair(Aimbot, ZoomDistance);
-        WriteSectionEnd();
-        
-        WriteSection(NoRecoil);
-        WritePair(NoRecoil, RCSEnabled);
-        WritePair(NoRecoil, Pitch);
-        WritePair(NoRecoil, Yaw);
         WriteSectionEnd();
 
         WriteSection(Glow);
@@ -124,12 +132,22 @@ bool ReadConfig(const std::string &configFile) {
     }
     
     ReadBool(Aimbot, Enabled);
+    ReadBool(Aimbot, RCSEnabled);
+
     ReadBool(Aimbot, WWhenAttack);
     ReadBool(Aimbot, WInScope);
+
     ReadBool(Aimbot, AllowTargetSwitch);
+    ReadBool(Aimbot, stopOut);
+
     ReadBool(Aimbot, PredictMovement);
     ReadBool(Aimbot, PredictBulletDrop);
+
     ReadInt(Aimbot, Hitbox);
+
+    ReadInt(Aimbot, Pitch);
+    ReadInt(Aimbot, Yaw);
+
     ReadFloat(Aimbot, deadZone);
     ReadFloat(Aimbot, Smooth);
     ReadFloat(Aimbot, ExtraSmooth);
@@ -138,10 +156,6 @@ bool ReadConfig(const std::string &configFile) {
     ReadFloat(Aimbot, MinDistance);
     ReadFloat(Aimbot, HipfireDistance);
     ReadFloat(Aimbot, ZoomDistance);
-    
-    ReadBool(NoRecoil, RCSEnabled);
-    ReadInt(NoRecoil, Pitch);
-    ReadInt(NoRecoil, Yaw);
 
     ReadBool(Glow, Enabled);
     ReadBool(Glow, ItemGlow);
