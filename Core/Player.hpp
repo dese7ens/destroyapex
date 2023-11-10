@@ -46,6 +46,7 @@ struct Player {
 
     float DistanceToLocalPlayer;
     float Distance2DToLocalPlayer;
+    float yaw;
 
     bool IsLockedOn;
 
@@ -64,6 +65,8 @@ struct Player {
         if (!IsPlayer() && !IsDummy()) { BasePointer = 0; return; }
         IsDead = (IsDummy()) ? false : Memory::Read<short>(BasePointer + OFF_LIFE_STATE) > 0;
         IsKnocked = (IsDummy()) ? false : Memory::Read<short>(BasePointer + OFF_BLEEDOUT_STATE) > 0;
+
+        yaw = Memory::Read<float>(BasePointer + OFF_YAW);
 
         LocalOrigin = Memory::Read<Vector3D>(BasePointer + OFF_LOCAL_ORIGIN);
         AbsoluteVelocity = Memory::Read<Vector3D>(BasePointer + OFF_ABSVELOCITY);

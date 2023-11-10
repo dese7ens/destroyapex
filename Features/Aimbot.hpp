@@ -40,8 +40,8 @@ struct Aimbot {
     float FinalDistance = 0;
     float FinalFOV = 0;
 
-    float Speed = 40;
     float Smooth = 10;
+    float deadZone = 0.01;
     float ExtraSmooth = 250;
     float HipfireFOV = 30;
     float ZoomFOV = 10;
@@ -112,18 +112,18 @@ struct Aimbot {
 
             ImGui::Separator();
 
-            ImGui::SliderFloat("Speed", &Speed, 1, 100, "%.0f");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Speed of the Aim-Assist\nBigger = Faster");
-
-            ImGui::Separator();
-
-            ImGui::SliderFloat("Smooth", &Smooth, 1, 20, "%.0f");
+            ImGui::SliderFloat("Smooth", &Smooth, 10, 200, "%.0f");
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Smoothness for the Aim-Assist\nSmaller = Faster and vice versa");
             ImGui::SliderFloat("Extra Smooth", &ExtraSmooth, 100, 5000, "%.0f");
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Extra smoothness by calculating the distance between you and the target");
+
+            ImGui::Separator();
+
+            ImGui::SliderFloat("Dead Zone", &deadZone, 0, 200, "%.0f");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("Aim won't work in this radius/100 to reduce shakes");
 
             ImGui::Separator();
 
@@ -156,7 +156,7 @@ struct Aimbot {
             Config::Aimbot::PredictMovement = PredictMovement;
             Config::Aimbot::PredictBulletDrop = PredictBulletDrop;
             Config::Aimbot::Hitbox = static_cast<int>(Hitbox);
-            Config::Aimbot::Speed = Speed;
+            Config::Aimbot::deadZone = deadZone;
             Config::Aimbot::Smooth = Smooth;
             Config::Aimbot::ExtraSmooth = ExtraSmooth;
             Config::Aimbot::HipfireFOV = HipfireFOV;
@@ -188,6 +188,8 @@ struct Aimbot {
     void Aim() {
         // Is aim enabled
         if (!AimbotEnabled) { ReleaseTarget(); return; }
+
+        if (Myself->weaponID == -251) return;
 
         // FOV changes if we are zoomed or not
         if (Myself->IsZooming) {
@@ -222,12 +224,12 @@ struct Aimbot {
             TargetSelected = true;
         }
         
-        // Is target in FOV
+        /* Is target in FOV
         double DistanceFromCrosshair = CalculateDistanceFromCrosshair(CurrentTarget);
         if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1) {
             ReleaseTarget();
             return;
-        }
+        }*/
 
         // Get Target Angle
         QAngle DesiredAngles = QAngle(0, 0);
@@ -236,6 +238,7 @@ struct Aimbot {
 
         // Calculate Increment
         Vector2D DesiredAnglesIncrement = Vector2D(CalculatePitchIncrement(DesiredAngles), CalculateYawIncrement(DesiredAngles));
+        Vector2D DesiredAnglesIncrement2 = DesiredAnglesIncrement;
 
         // Calculate Smooth
         float Extra = ExtraSmooth / CurrentTarget->DistanceToLocalPlayer;
@@ -244,7 +247,7 @@ struct Aimbot {
         // Aimbot calcs
         Vector2D aimbotDelta = DesiredAnglesIncrement
             .Divide(TotalSmooth)
-            .Multiply(Speed);
+            .Multiply(100);
         double aimYawIncrement = aimbotDelta.y * -1;
         double aimPitchIncrement = aimbotDelta.x;
 
@@ -252,8 +255,11 @@ struct Aimbot {
         int totalPitchIncrementInt = RoundHalfEven(AL1AF0(aimPitchIncrement));
         int totalYawIncrementInt = RoundHalfEven(AL1AF0(aimYawIncrement));
 
-        // Move Mouse
+        // Deadzone check
+        if (fabs(DesiredAnglesIncrement2.x) < deadZone*0.01) totalPitchIncrementInt = 0;
+        if (fabs(DesiredAnglesIncrement2.y) < deadZone*0.01) totalYawIncrementInt = 0;
         if (totalPitchIncrementInt == 0 && totalYawIncrementInt == 0) return;
+        // Move Mouse
         X11Display->MoveMouse(totalPitchIncrementInt, totalYawIncrementInt);
     }
 
@@ -295,7 +301,7 @@ struct Aimbot {
 
     bool GetAngleToTarget(const Player* Target, QAngle& Angle) const {
         const Vector3D TargetPosition = Target->GetBonePosition(Hitbox);
-        const Vector3D TargetVelocity = Target->AbsoluteVelocity;
+        const Vector3D TargetVelocity = (Target->AbsoluteVelocity.Add(Myself->SelfAbsVelocity));
         const Vector3D CameraPosition = Myself->CameraPosition;
         const QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
         

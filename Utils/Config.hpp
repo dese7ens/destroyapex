@@ -29,7 +29,7 @@ namespace Config {
         bool PredictMovement = true;
         bool PredictBulletDrop = true;
         int Hitbox = 1;
-        float Speed = 40;
+        float deadZone = 1;
         float Smooth = 10;
         float ExtraSmooth = 250;
         float HipfireFOV = 10;
@@ -56,7 +56,13 @@ namespace Config {
 
     namespace Triggerbot {
         bool Enabled = true;
-        float Range = 200;
+        bool workWObind = true;
+        float Hip = 50;
+        float Zoom = 200;
+    };
+
+    namespace Misc {
+        bool SpectatorEnabled = true;
     };
 };
 
@@ -71,7 +77,7 @@ void UpdateConfig() {
         WritePair(Aimbot, PredictMovement);
         WritePair(Aimbot, PredictBulletDrop);
         WritePair(Aimbot, Hitbox);
-        WritePair(Aimbot, Speed);
+        WritePair(Aimbot, deadZone);
         WritePair(Aimbot, Smooth);
         WritePair(Aimbot, ExtraSmooth);
         WritePair(Aimbot, HipfireFOV);
@@ -98,7 +104,13 @@ void UpdateConfig() {
 
         WriteSection(Triggerbot);
         WritePair(Triggerbot, Enabled);
-        WritePair(Triggerbot, Range);
+        WritePair(Triggerbot, workWObind);
+        WritePair(Triggerbot, Hip);
+        WritePair(Triggerbot, Zoom);
+        WriteSectionEnd();
+
+        WriteSection(Misc);
+        WritePair(Misc, SpectatorEnabled);
         WriteSectionEnd();
         conf.close();
     }
@@ -118,7 +130,7 @@ bool ReadConfig(const std::string &configFile) {
     ReadBool(Aimbot, PredictMovement);
     ReadBool(Aimbot, PredictBulletDrop);
     ReadInt(Aimbot, Hitbox);
-    ReadFloat(Aimbot, Speed);
+    ReadFloat(Aimbot, deadZone);
     ReadFloat(Aimbot, Smooth);
     ReadFloat(Aimbot, ExtraSmooth);
     ReadFloat(Aimbot, HipfireFOV);
@@ -139,7 +151,11 @@ bool ReadConfig(const std::string &configFile) {
     ReadFloat(Glow, SeerMaxDistance);
 
     ReadBool(Triggerbot, Enabled);
-    ReadFloat(Triggerbot, Range);
+    ReadBool(Triggerbot, workWObind);
+    ReadFloat(Triggerbot, Hip);
+    ReadFloat(Triggerbot, Zoom);
+
+    ReadBool(Misc, SpectatorEnabled);
 
     UpdateConfig();
     return true;

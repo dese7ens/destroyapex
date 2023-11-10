@@ -16,6 +16,8 @@ constexpr long OFF_MAXHEALTH = 0x04a8;                        //[RecvTable.DT_Pl
 constexpr long OFF_SHIELD = 0x01a0;                           //[RecvTable.DT_TitanSoul]->m_shieldHealth
 constexpr long OFF_MAXSHIELD = 0x01a4;                        //[RecvTable.DT_TitanSoul]->m_shieldHealthMax
 
+constexpr long OFF_YAW = 0x21fc - 0x8;                        //m_currentFramePlayer.m_ammoPoolCount - 0x8
+
 constexpr long OFF_INATTACK = 0x07383af0;                     //[Buttons]->in_attack
 
 constexpr long OFF_CAMERAORIGIN = 0x1f00;                     //[Miscellaneous]->CPlayer!camera_origin
@@ -38,6 +40,7 @@ constexpr long OFF_PUNCH_ANGLES = 0x2468;                     //[DataMap.C_Playe
 // Weapon 
 constexpr long OFF_WEAPON_HANDLE = 0x1964;                    //[RecvTable.DT_Player]->m_latestPrimaryWeapons
 constexpr long OFF_WEAPON_INDEX = 0x17a8;                     //[RecvTable.DT_WeaponX]->m_weaponNameIndex
+constexpr long OFFSET_OFF_WEAPON = 0x1974;                    //m_latestNonOffhandWeapons
 constexpr long OFF_PROJECTILESCALE = 0x1EC4;                  //projectile_gravity_scale + [WeaponSettingsMeta]base
 constexpr long OFF_PROJECTILESPEED = 0x1EBC;                  //projectile_launch_speed + [WeaponSettingsMeta]base
 

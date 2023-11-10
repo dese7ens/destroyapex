@@ -20,6 +20,7 @@
 #include "Features/Aimbot.hpp"
 #include "Features/Sense.hpp"
 #include "Features/Triggerbot.hpp"
+#include "Features/Misc.hpp"
 
 #include "Overlay/Overlay.hpp"
 
@@ -46,6 +47,7 @@ std::vector<Player*>* Players = new std::vector<Player*>;
 Sense* ESP = new Sense(Players, GameCamera);
 Aimbot* AimAssist = new Aimbot(X11Display, Myself, Players);
 Triggerbot* Trigger = new Triggerbot(X11Display, Myself, Players);
+Misc* Utils = new Misc(Players, Myself);
 
 // Booleans and Variables
 bool IsMenuOpened = true;
@@ -107,7 +109,7 @@ void LoadConfig() {
     AimAssist->PredictMovement = Config::Aimbot::PredictMovement;
     AimAssist->PredictBulletDrop = Config::Aimbot::PredictBulletDrop;
     AimAssist->Hitbox = static_cast<HitboxType>(Config::Aimbot::Hitbox);
-    AimAssist->Speed = Config::Aimbot::Speed;
+    AimAssist->deadZone = Config::Aimbot::deadZone;
     AimAssist->Smooth = Config::Aimbot::Smooth;
     AimAssist->ExtraSmooth = Config::Aimbot::ExtraSmooth;
     AimAssist->HipfireFOV = Config::Aimbot::HipfireFOV;
@@ -130,13 +132,19 @@ void LoadConfig() {
 
     // Triggerbot //
     Trigger->TriggerbotEnabled = Config::Triggerbot::Enabled;
-    Trigger->TriggerbotRange = Config::Triggerbot::Range;
+    Trigger->workWObind = Config::Triggerbot::workWObind;
+    Trigger->TriggerbotRangeHip = Config::Triggerbot::Hip;
+    Trigger->TriggerbotRangeZoom = Config::Triggerbot::Zoom;
+
+    // Misc //
+    Utils->SpectatorEnabled = Config::Misc::SpectatorEnabled;
 }
 
 void SaveConfig() {
     if (!AimAssist->Save()) std::cout << "something went wrong trying to save Aimbot settings" << std::endl;
     if (!ESP->Save()) std::cout << "something went wrong trying to save ESP settings" << std::endl;
     if (!Trigger->Save()) std::cout << "something went wrong trying to save Triggerbot settings" << std::endl;
+    if (!Utils->Save()) std::cout << "something went wrong trying to save Triggerbot settings" << std::endl;
     UpdateConfig();
 }
 
@@ -181,6 +189,7 @@ void RenderUI() {
         AimAssist->RenderUI();
         Trigger->RenderUI();
         ESP->RenderUI();
+        Utils->RenderUI();
 
         // Draw Credits //
         if (ImGui::BeginTabItem("Credits", nullptr, ImGuiTabItemFlags_NoCloseWithMiddleMouseButton | ImGuiTabItemFlags_NoReorder)) {
@@ -236,6 +245,7 @@ bool UpdateCore() {
         ESP->Update();
         AimAssist->Update();
         Trigger->Update();
+        Utils->Update();
 
         return true;
     } catch(const std::exception& ex) {

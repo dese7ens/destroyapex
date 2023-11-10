@@ -23,6 +23,8 @@ struct LocalPlayer {
     Vector2D PunchAnglesDifferent;
 
     int WeaponIndex;
+    int weaponID;
+    float yaw;
     float WeaponProjectileSpeed;
     float WeaponProjectileScale;
 
@@ -33,6 +35,8 @@ struct LocalPlayer {
     void Read() {
         BasePointer = Memory::Read<long>(OFF_REGION + OFF_LOCAL_PLAYER);
         if (BasePointer == 0) return;
+
+        yaw = Memory::Read<float>(BasePointer + OFF_YAW);
 
         IsDead = Memory::Read<short>(BasePointer + OFF_LIFE_STATE) > 0;
         IsKnocked = Memory::Read<short>(BasePointer + OFF_BLEEDOUT_STATE) > 0;
@@ -55,6 +59,7 @@ struct LocalPlayer {
             WeaponIndex = Memory::Read<int>(WeaponEntity + OFF_WEAPON_INDEX);
             WeaponProjectileSpeed = Memory::Read<float>(WeaponEntity + OFF_PROJECTILESPEED);
             WeaponProjectileScale = Memory::Read<float>(WeaponEntity + OFF_PROJECTILESCALE);
+            weaponID = Memory::Read<int>(BasePointer + OFFSET_OFF_WEAPON);
         }
     }
 
