@@ -115,9 +115,6 @@ void LoadConfig() {
 
     AimAssist->Hitbox = static_cast<HitboxType>(Config::Aimbot::Hitbox);
 
-    AimAssist->PitchMultiplier = Config::Aimbot::Pitch;
-    AimAssist->YawMultiplier = Config::Aimbot::Yaw;
-
     AimAssist->deadZone = Config::Aimbot::deadZone;
     AimAssist->Smooth = Config::Aimbot::Smooth;
     AimAssist->ExtraSmooth = Config::Aimbot::ExtraSmooth;

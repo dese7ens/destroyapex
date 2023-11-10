@@ -35,9 +35,6 @@ namespace Config {
         bool PredictBulletDrop = true;
 
         int Hitbox = 1;
-        
-        int Pitch = 20;
-        int Yaw = 14;  
 
         float deadZone = 1;
         float Smooth = 10;
@@ -87,9 +84,6 @@ void UpdateConfig() {
         WritePair(Aimbot, PredictBulletDrop);
 
         WritePair(Aimbot, Hitbox);
-
-        WritePair(Aimbot, Pitch);
-        WritePair(Aimbot, Yaw);
 
         WritePair(Aimbot, deadZone);
         WritePair(Aimbot, Smooth);
@@ -144,9 +138,6 @@ bool ReadConfig(const std::string &configFile) {
     ReadBool(Aimbot, PredictBulletDrop);
 
     ReadInt(Aimbot, Hitbox);
-
-    ReadInt(Aimbot, Pitch);
-    ReadInt(Aimbot, Yaw);
 
     ReadFloat(Aimbot, deadZone);
     ReadFloat(Aimbot, Smooth);

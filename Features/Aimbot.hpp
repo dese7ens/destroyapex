@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 #include "../Core/Player.hpp"
 #include "../Core/LocalPlayer.hpp"
 #include "../Core/Offsets.hpp"
@@ -36,8 +37,8 @@ struct Aimbot {
 
     HitboxType Hitbox = HitboxType::UpperChest;
     
-    float PitchMultiplier = 20;
-    float YawMultiplier = 14;
+    float PitchMultiplier = 0;
+    float YawMultiplier = 0;
 
     float FinalDistance = 0;
     float FinalFOV = 0;
@@ -113,15 +114,6 @@ struct Aimbot {
 
             ImGui::Separator();
 
-            ImGui::SliderFloat("Pitch multiplier", &PitchMultiplier, 1, 100, "%.0f");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Y RCS factor");
-            ImGui::SliderFloat("Yaw multiplier", &YawMultiplier, 1, 100, "%.0f");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("X RCS factor");
-
-            ImGui::Separator();
-
             ImGui::SliderFloat("Smooth", &Smooth, 10, 200, "%.0f");
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Smoothness for the Aim-Assist\nSmaller = Faster and vice versa");
@@ -173,9 +165,6 @@ struct Aimbot {
 
             Config::Aimbot::Hitbox = static_cast<int>(Hitbox);
 
-            Config::Aimbot::Pitch = PitchMultiplier;
-            Config::Aimbot::Yaw = YawMultiplier;
-
             Config::Aimbot::deadZone = deadZone;
             Config::Aimbot::Smooth = Smooth;
             Config::Aimbot::ExtraSmooth = ExtraSmooth;
@@ -200,6 +189,35 @@ struct Aimbot {
         //std::cout << "X " << Myself->SelfAbsVelocity.x << std::endl;
         //std::cout << "Y " << Myself->SelfAbsVelocity.y << std::endl;
         //std::cout << "Z " << Myself->SelfAbsVelocity.z << std::endl;
+    }
+
+    std::unordered_map <int, std::pair<float, float>> IdToRCS = {
+        {80, {100, 40}},   // RE45
+        {103, {178, 125}}, // R99
+        {79, {140, 113}},  // Alternator
+        {0, {110, 130}},   // R301
+        {105, {110, 100}}, // Spitfire
+
+        {111, {150, 140}}, // Car
+        {87, {125, 140}}, // Flatline
+        {89, {140, 140}}, // Hemlock
+        {20, {140, 140}}, // Rampage
+        
+        {83, {125, 140}}, // Devoution
+        {92, {125, 130}}, // LStar
+        {109, {100, 122}}, // Volt
+        {85, {125, 140}}, // Havoc
+        {112, {134, 122}}, // Nemesis
+
+        {101, {106, 94}}, // Prowler
+    };
+
+    void getMultipliers(float &Pitch, float &Yaw){
+        auto it = IdToRCS.find(Myself->WeaponIndex);
+        if (it != IdToRCS.end()){
+            Pitch = it->second.first;
+            Yaw = it->second.second;
+        };
     }
 
     void Aim() {
@@ -288,6 +306,8 @@ struct Aimbot {
 
         int weaponId = Myself->WeaponIndex;
 
+        getMultipliers(PitchMultiplier, YawMultiplier);
+
         if (
             weaponId == 102 ||
             weaponId == 86 ||
@@ -302,9 +322,9 @@ struct Aimbot {
         Vector2D punchAnglesDiff = Myself->PunchAnglesDifferent;
         if (punchAnglesDiff.IsZeroVector()){ return; }
         int rcsPitch = (punchAnglesDiff.x > 0)
-            ? RoundHalfEven(punchAnglesDiff.x * PitchMultiplier)
+            ? RoundHalfEven(punchAnglesDiff.x * PitchMultiplier * 0.1)
             : 0;
-        int rcsYaw = RoundHalfEven(-punchAnglesDiff.y * YawMultiplier);
+        int rcsYaw = RoundHalfEven(-punchAnglesDiff.y * YawMultiplier * 0.1);
         X11Display->MoveMouse(rcsPitch, rcsYaw);
     }
 
