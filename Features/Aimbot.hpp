@@ -69,7 +69,7 @@ struct Aimbot {
             ImGui::SameLine();
             ImGui::Checkbox("Recoil Control", &RecoilEnabled);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Reduce the intensity of weapon's recoil.");
+                ImGui::SetTooltip("Presonal recomendation - make Flatline almost norecoil, other guns will have no recoil too");
 
             ImGui::Separator();
 
