@@ -46,7 +46,6 @@ struct Player {
 
     float DistanceToLocalPlayer;
     float Distance2DToLocalPlayer;
-    float yaw;
 
     bool IsLockedOn;
 
@@ -65,8 +64,6 @@ struct Player {
         if (!IsPlayer() && !IsDummy()) { BasePointer = 0; return; }
         IsDead = (IsDummy()) ? false : Memory::Read<short>(BasePointer + OFF_LIFE_STATE) > 0;
         IsKnocked = (IsDummy()) ? false : Memory::Read<short>(BasePointer + OFF_BLEEDOUT_STATE) > 0;
-
-        yaw = Memory::Read<float>(BasePointer + OFF_YAW);
 
         LocalOrigin = Memory::Read<Vector3D>(BasePointer + OFF_LOCAL_ORIGIN);
         AbsoluteVelocity = Memory::Read<Vector3D>(BasePointer + OFF_ABSVELOCITY);
@@ -117,35 +114,7 @@ struct Player {
         return Team == 97;
     }
 
-    void PrintInfo() {
-        std::system("clear");
-        std::cout << "Position: " << LocalOrigin.x << " " << LocalOrigin.y << " " << LocalOrigin.z << std::endl;
-        std::cout << "Velocity: " << AbsoluteVelocity.x << " " << AbsoluteVelocity.y << " " << AbsoluteVelocity.z << std::endl;
-        std::cout << "IsAimedAt: " << IsAimedAt << std::endl;
-    }
-
-    void EnableGlow() {
-        if (GlowEnable != 1) Memory::Write<int>(BasePointer + OFF_GLOW_ENABLE, 1);
-        if (GlowThroughWall != 2) {
-            Memory::Write<int>(BasePointer + OFF_GLOW_THROUGH_WALL, 2);
-            Memory::Write<int>(BasePointer + OFF_GLOW_FIX, 2);
-        }
-        int AiDi = IsVisible ? 0 : 1;
-        if (IsLockedOn) { AiDi = 2; }
-        if (HighlightID != AiDi) Memory::Write<int>(BasePointer + OFF_GLOW_HIGHLIGHT_ID + 1, AiDi);
-    }
-
-    void DisableGlow() {
-        if (GlowEnable != 2) Memory::Write<int>(BasePointer + OFF_GLOW_ENABLE, 2);
-        if (GlowThroughWall != 0) {
-            Memory::Write<int>(BasePointer + OFF_GLOW_THROUGH_WALL, 0);
-            Memory::Write<int>(BasePointer + OFF_GLOW_FIX, 2);
-        }
-        if (HighlightID != 0) Memory::Write<int>(BasePointer + OFF_GLOW_HIGHLIGHT_ID + 1, 0);
-    }
-
     // Bones //
-
     int GetBoneFromHitbox(HitboxType HitBox) const {
         long ModelPointer = Memory::Read<long>(BasePointer + OFF_STUDIOHDR);
         if (!Memory::IsValidPointer(ModelPointer))

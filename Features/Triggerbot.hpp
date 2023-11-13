@@ -19,13 +19,10 @@
 
 struct Triggerbot {
     bool TriggerbotEnabled = true;
+    float TriggerbotRange = 200;
     bool workWObind = true;
-    float TriggerbotRangeHip = 50;
-    float TriggerbotRangeZoom = 200;
 
-    float finalRange;
-
-    std::set<int> WeaponList = { 1, 84, 95, 86, 102, 94, 104, 88, 110, 106, 108 };
+    std::set<int> WeaponList = { 1, 84, 95, 86, 102, 94, 104, 88, 110, 89, 112, 106, 108, 91 };
 
     XDisplay* X11Display;
     LocalPlayer* Myself;
@@ -45,14 +42,9 @@ struct Triggerbot {
             ImGui::SameLine();
             ImGui::Checkbox("Work WO Bind", &workWObind);
 
-            ImGui::Separator();
-
-            ImGui::SliderFloat("Max Range Hip", &TriggerbotRangeHip, 0, 500, "%.0f");
+            ImGui::SliderFloat("Triggerbot Range", &TriggerbotRange, 0, 1000, "%.0f");
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Triggerbot's hipfire max activation range.");
-            ImGui::SliderFloat("Max Range Zoom", &TriggerbotRangeZoom, 0, 1000, "%.0f");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Triggerbot's zoom max activation range.");
+                ImGui::SetTooltip("Triggerbot's activation range.");
             ImGui::EndTabItem();
         }
     }
@@ -60,9 +52,8 @@ struct Triggerbot {
     bool Save() {
         try {
             Config::Triggerbot::Enabled = TriggerbotEnabled;
+            Config::Triggerbot::Range = TriggerbotRange;
             Config::Triggerbot::workWObind = workWObind;
-            Config::Triggerbot::Hip = TriggerbotRangeHip;
-            Config::Triggerbot::Zoom = TriggerbotRangeZoom;
             return true;
         } catch (...) {
             return false;
@@ -75,21 +66,12 @@ struct Triggerbot {
 
         if (WeaponList.find(Myself->WeaponIndex) == WeaponList.end()) return;
 
-        // Range changes if we are zoomed or not
-        if (Myself->IsZooming) {
-            finalRange = TriggerbotRangeZoom;
-        }
-        else {
-            finalRange = TriggerbotRangeHip;
-        }
-
         for (int i = 0; i < Players->size(); i++) {
             Player* player = Players->at(i);
             if (!player->IsCombatReady()) continue;
             if (!player->IsHostile) continue;
             if (!player->IsAimedAt) continue;
-            if (player->DistanceToLocalPlayer < Conversion::ToGameUnits(finalRange) &&
-            (X11Display->KeyDown(XK_Shift_L) || workWObind)) {
+            if (player->DistanceToLocalPlayer < Conversion::ToGameUnits(TriggerbotRange) && (X11Display->KeyDown(XK_Shift_L) || workWObind)) {
                 X11Display->MouseClickLeft();
                 break;
             }

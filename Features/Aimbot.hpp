@@ -1,7 +1,6 @@
 #pragma once
 #include <iostream>
 #include <vector>
-#include <unordered_map>
 #include "../Core/Player.hpp"
 #include "../Core/LocalPlayer.hpp"
 #include "../Core/Offsets.hpp"
@@ -22,12 +21,12 @@
 #include "../imgui/imgui_impl_glfw.h"
 #include "../imgui/imgui_impl_opengl3.h"
 
+// Conversion
+#define DEG2RAD( x  )  ( (float)(x) * (float)(M_PI / 180.f) )
+
 struct Aimbot {
     bool AimbotEnabled = true;
-    bool NoRecoilEnabled = true;
-
-    bool AllowTargetSwitch = true;
-    bool stopOut = false;
+    bool RecoilEnabled = true;
 
     bool WWhenAttack = true;
     bool WInScope = true;
@@ -35,22 +34,19 @@ struct Aimbot {
     bool PredictMovement = true;
     bool PredictBulletDrop = true;
 
-    HitboxType Hitbox = HitboxType::UpperChest;
-    
-    float PitchMultiplier = 0;
-    float YawMultiplier = 0;
-
     float FinalDistance = 0;
-    float FinalFOV = 0;
 
     float Smooth = 10;
     float deadZone = 0.01;
     float ExtraSmooth = 250;
-    float HipfireFOV = 30;
-    float ZoomFOV = 10;
+    float FOV = 10;
+    float ZoomScale = 1.2;
     float MinDistance = 1;
     float HipfireDistance = 60;
     float ZoomDistance = 160;
+
+    float PitchPower = 3;
+    float YawPower = 3;
 
     XDisplay* X11Display;
     LocalPlayer* Myself;
@@ -58,8 +54,6 @@ struct Aimbot {
 
     Player* CurrentTarget = nullptr;
     bool TargetSelected = true;
-
-    Vector2D previous_weaponPunchAngles;
 
     Aimbot(XDisplay* X11Display, LocalPlayer* Myself, std::vector<Player*>* GamePlayers) {
         this->X11Display = X11Display;
@@ -73,27 +67,24 @@ struct Aimbot {
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Toggle the Aim-Assist");
             ImGui::SameLine();
-            ImGui::Checkbox("No recoil", &NoRecoilEnabled);
+            ImGui::Checkbox("Recoil Control", &RecoilEnabled);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Toggle the NoRecoil");
-            
-            ImGui::Separator();
+                ImGui::SetTooltip("Reduce the intensity of weapon's recoil.");
 
-            ImGui::Checkbox("Prevent target lock", &stopOut);
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Stop aiming even if buttons are pressed and target out of FOV");
-            if (stopOut){
-                ImGui::SameLine();
-                ImGui::Checkbox("Allow target switch", &AllowTargetSwitch);
-                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                    ImGui::SetTooltip("Allow switching Target when current target no longer meets requirements");
-            }
-            
             ImGui::Separator();
 
             ImGui::Checkbox("Aim when attack", &WWhenAttack);
             ImGui::SameLine();
             ImGui::Checkbox("Aim in ADS", &WInScope);
+
+            ImGui::Separator();
+            
+            ImGui::SliderFloat("Pitch", &PitchPower, 1, 100, "%.0f");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("Pitch Power");
+            ImGui::SliderFloat("Yaw", &YawPower, 1, 100, "%.0f");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("Yaw Power");
 
             ImGui::Separator();
 
@@ -104,17 +95,16 @@ struct Aimbot {
             ImGui::Checkbox("Predict Bullet Drop", &PredictBulletDrop);
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Predict weapon's bullet drop");
-            
-            ImGui::Separator();
-
-            const char* HitboxTypes[] = { "Head", "Neck", "Upper Chest", "Lower Chest", "Stomach", "Hip" };
-            int HitboxTypeIndex = static_cast<int>(Hitbox);
-            ImGui::Combo("Hitbox Type", &HitboxTypeIndex, HitboxTypes, IM_ARRAYSIZE(HitboxTypes));
-            Hitbox = static_cast<HitboxType>(HitboxTypeIndex);
 
             ImGui::Separator();
 
-            ImGui::SliderFloat("Smooth", &Smooth, 10, 200, "%.0f");
+            ImGui::SliderFloat("Dead Zone", &deadZone, 1, 200, "%.0f");
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("Aim won't work in this radius/100 to reduce shakes");
+
+            ImGui::Separator();
+
+            ImGui::SliderFloat("Smooth", &Smooth, 20, 200, "%.0f");
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Smoothness for the Aim-Assist\nSmaller = Faster and vice versa");
             ImGui::SliderFloat("Extra Smooth", &ExtraSmooth, 100, 5000, "%.0f");
@@ -123,18 +113,10 @@ struct Aimbot {
 
             ImGui::Separator();
 
-            ImGui::SliderFloat("Dead Zone", &deadZone, 0, 200, "%.0f");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Aim won't work in this radius/100 to reduce shakes");
-
-            ImGui::Separator();
-
-            ImGui::SliderFloat("Hipfire FOV", &HipfireFOV, 1, 180, "%.0f");
+            ImGui::SliderFloat("FOV", &FOV, 1, 90, "%.0f");
             if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 ImGui::SetTooltip("Field of View");
-            ImGui::SliderFloat("Zoom FOV", &ZoomFOV, 1, 180, "%.0f");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("Field of View");
+            ImGui::SliderFloat("Zoom Scale", &ZoomScale, 0, 5, "%.1f");
 
             ImGui::Separator();
 
@@ -152,27 +134,25 @@ struct Aimbot {
     bool Save() {
         try {
             Config::Aimbot::Enabled = AimbotEnabled;
-            Config::Aimbot::RCSEnabled = NoRecoilEnabled;
+            Config::Aimbot::RecoilControl = RecoilEnabled;
 
             Config::Aimbot::WWhenAttack = WWhenAttack;
             Config::Aimbot::WInScope = WInScope;
 
-            Config::Aimbot::AllowTargetSwitch = AllowTargetSwitch;
-            Config::Aimbot::AllowTargetSwitch = AllowTargetSwitch;
-
             Config::Aimbot::PredictMovement = PredictMovement;
-            Config::Aimbot::stopOut = stopOut;
-
-            Config::Aimbot::Hitbox = static_cast<int>(Hitbox);
+            Config::Aimbot::PredictBulletDrop = PredictBulletDrop;
 
             Config::Aimbot::deadZone = deadZone;
             Config::Aimbot::Smooth = Smooth;
             Config::Aimbot::ExtraSmooth = ExtraSmooth;
-            Config::Aimbot::HipfireFOV = HipfireFOV;
-            Config::Aimbot::ZoomFOV = ZoomFOV;
+            Config::Aimbot::FOV = FOV;
+            Config::Aimbot::ZoomScale = ZoomScale;
             Config::Aimbot::MinDistance = MinDistance;
             Config::Aimbot::HipfireDistance = HipfireDistance;
             Config::Aimbot::ZoomDistance = ZoomDistance;
+
+            Config::Aimbot::PitchPower = PitchPower;
+            Config::Aimbot::YawPower = YawPower;
             return true;
         } catch (...) {
             return false;
@@ -180,93 +160,40 @@ struct Aimbot {
     }
 
     void Update() {
-        // Are we knocked?
-        if (!Myself->IsCombatReady()) { TargetSelected = false; return; }
-
-        // If aim is disabled / target out of FOV //
-        Aim();
-        RCS();
-        //std::cout << "X " << Myself->SelfAbsVelocity.x << std::endl;
-        //std::cout << "Y " << Myself->SelfAbsVelocity.y << std::endl;
-        //std::cout << "Z " << Myself->SelfAbsVelocity.z << std::endl;
-    }
-
-    std::unordered_map <int, std::pair<float, float>> IdToRCS = {
-        {80, {100, 40}},   // RE45
-        {103, {178, 125}}, // R99
-        {79, {140, 113}},  // Alternator
-        {0, {110, 130}},   // R301
-        {105, {110, 100}}, // Spitfire
-
-        {111, {150, 140}}, // Car
-        {87, {125, 140}}, // Flatline
-        {89, {140, 140}}, // Hemlock
-        {20, {140, 140}}, // Rampage
+        if (!Myself->IsCombatReady()) { ReleaseTarget(); return; }
         
-        {83, {125, 140}}, // Devoution
-        {92, {125, 130}}, // LStar
-        {109, {100, 122}}, // Volt
-        {85, {125, 140}}, // Havoc
-        {112, {134, 122}}, // Nemesis
-
-        {101, {106, 94}}, // Prowler
-    };
-
-    void getMultipliers(float &Pitch, float &Yaw){
-        auto it = IdToRCS.find(Myself->WeaponIndex);
-        if (it != IdToRCS.end()){
-            Pitch = it->second.first;
-            Yaw = it->second.second;
-        };
+        RCS();
+        StartAiming();
     }
 
-    void Aim() {
-        // Is aim enabled
+    void StartAiming() {
         if (!AimbotEnabled) { ReleaseTarget(); return; }
 
-        if (Myself->weaponID == -251) return;
-
-        // FOV changes if we are zoomed or not
-        if (Myself->IsZooming) {
-            FinalFOV = ZoomFOV;
+        // Distance based on scope
+        if (Myself->IsZooming)
             FinalDistance = ZoomDistance;
-        }
-        else {
-            FinalFOV = HipfireFOV;
-            FinalDistance = HipfireDistance;
-        }
+        else FinalDistance = HipfireDistance;
 
-        // Is aim key pressed
-        if (
-            !X11Display->KeyDown(XK_Caps_Lock) && 
+        // If keys arent pressed
+        if (!X11Display->KeyDown(XK_Caps_Lock) && 
             !(Myself->IsInAttack && WWhenAttack) &&
             !(Myself->IsZooming && WInScope)) { ReleaseTarget(); return; }
 
+        // If not greande
+        if (Myself->IsHoldingGrenade) { ReleaseTarget(); return; }
+
         // Get target
         Player* Target = CurrentTarget;
-
         if (!IsValidTarget(Target)) {
-            if(TargetSelected && !AllowTargetSwitch)
-                return;
-
             Target = FindBestTarget();
             if (!IsValidTarget(Target)) {
-                CurrentTarget = nullptr;
+                ReleaseTarget();
                 return;
             }
             
             CurrentTarget = Target;
             CurrentTarget->IsLockedOn = true;
             TargetSelected = true;
-        }
-        
-        // Stop aiming if target not in FOV
-        if (stopOut){
-            double DistanceFromCrosshair = CalculateDistanceFromCrosshair(CurrentTarget);
-            if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1) {
-                ReleaseTarget();
-                return;
-            }
         }
 
         // Get Target Angle
@@ -284,8 +211,8 @@ struct Aimbot {
 
         // Aimbot calcs
         Vector2D aimbotDelta = DesiredAnglesIncrement
-            .Divide(TotalSmooth)
-            .Multiply(100);
+            .Multiply(100)
+            .Divide(TotalSmooth);
         double aimYawIncrement = aimbotDelta.y * -1;
         double aimPitchIncrement = aimbotDelta.x;
 
@@ -297,16 +224,16 @@ struct Aimbot {
         if (fabs(DesiredAnglesIncrement2.x) < deadZone*0.01) totalPitchIncrementInt = 0;
         if (fabs(DesiredAnglesIncrement2.y) < deadZone*0.01) totalYawIncrementInt = 0;
         if (totalPitchIncrementInt == 0 && totalYawIncrementInt == 0) return;
+        
         // Move Mouse
+        if (totalPitchIncrementInt == 0 && totalYawIncrementInt == 0) return;
         X11Display->MoveMouse(totalPitchIncrementInt, totalYawIncrementInt);
     }
 
     void RCS() {
-        if (!NoRecoilEnabled) return;
+        if (!RecoilEnabled) return;
 
         int weaponId = Myself->WeaponIndex;
-
-        getMultipliers(PitchMultiplier, YawMultiplier);
 
         if (
             weaponId == 102 ||
@@ -317,18 +244,27 @@ struct Aimbot {
             weaponId == 110 ||
             weaponId == 2
         ) return;
-        
+
+        float tmp = PitchPower;
+        if (weaponId == 103) tmp = PitchPower * 1.7;
+        if (weaponId == 111) tmp = PitchPower * 1.2;
+
         if (!Myself->IsInAttack) return;
+
         Vector2D punchAnglesDiff = Myself->PunchAnglesDifferent;
+
         if (punchAnglesDiff.IsZeroVector()){ return; }
+
         int rcsPitch = (punchAnglesDiff.x > 0)
-            ? RoundHalfEven(punchAnglesDiff.x * PitchMultiplier * 0.1)
+            ? RoundHalfEven(punchAnglesDiff.x * tmp)
             : 0;
-        int rcsYaw = RoundHalfEven(-punchAnglesDiff.y * YawMultiplier * 0.1);
+
+        int rcsYaw = RoundHalfEven(-punchAnglesDiff.y * YawPower);
+
         X11Display->MoveMouse(rcsPitch, rcsYaw);
     }
 
-    bool GetAngle(const Player* Target, QAngle& Angle) {
+    bool GetAngle(Player* Target, QAngle& Angle) {
         const QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
         if (!CurrentAngle.isValid())
             return false;
@@ -339,11 +275,11 @@ struct Aimbot {
         return true;
     }
 
-    bool GetAngleToTarget(const Player* Target, QAngle& Angle) const {
-        const Vector3D TargetPosition = Target->GetBonePosition(Hitbox);
-        const Vector3D TargetVelocity = (Target->AbsoluteVelocity.Add(Myself->SelfAbsVelocity));
-        const Vector3D CameraPosition = Myself->CameraPosition;
-        const QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
+    bool GetAngleToTarget(Player* Target, QAngle& Angle) {
+        Vector3D TargetPosition = Target->GetBonePosition(static_cast<HitboxType>(GetBestBone(Target)));
+        Vector3D TargetVelocity = Target->AbsoluteVelocity;
+        Vector3D CameraPosition = Myself->CameraPosition;
+        QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
         
         if (Myself->WeaponProjectileSpeed > 1.0f) {
             if (PredictBulletDrop && PredictMovement) {
@@ -393,40 +329,18 @@ struct Aimbot {
         return wayB;
     }
 
-    double CalculateDistanceFromCrosshair(Player* target) {
+    double CalculateDistanceFromCrosshair(Vector3D TargetPosition) {
         Vector3D CameraPosition = Myself->CameraPosition;
         QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
 
-        Vector3D TargetPos = target->LocalOrigin;
-        if (CameraPosition.Distance(TargetPos) <= 0.0001f)
+        if (CameraPosition.Distance(TargetPosition) <= 0.0001f)
             return -1;
 
-        QAngle TargetAngle = Resolver::CalculateAngle(CameraPosition, TargetPos);
+        QAngle TargetAngle = Resolver::CalculateAngle(CameraPosition, TargetPosition);
         if (!TargetAngle.isValid())
             return -1;
         
         return CurrentAngle.distanceTo(TargetAngle);
-    }
-
-    Player* FindBestTarget() {
-        float NearestDistance = 9999;
-        Player* BestTarget = nullptr;
-        Vector3D CameraPosition = Myself->CameraPosition;
-        QAngle CurrentAngle = QAngle(Myself->ViewAngles.x, Myself->ViewAngles.y).fixAngle();
-        for (int i = 0; i < Players->size(); i++) {
-            Player* p = Players->at(i);
-            if (!IsValidTarget(p)) continue;
-
-            double DistanceFromCrosshair = CalculateDistanceFromCrosshair(p);
-            if (DistanceFromCrosshair > FinalFOV || DistanceFromCrosshair == -1)
-                continue;
-
-            if (DistanceFromCrosshair < NearestDistance) {
-                BestTarget = p;
-                NearestDistance = DistanceFromCrosshair;
-            }
-        }
-        return BestTarget;
     }
 
     void ReleaseTarget() {
@@ -446,5 +360,66 @@ struct Aimbot {
     float AL1AF0(float num) {
         if (num > 0) return std::max(num, 1.0f);
         return std::min(num, -1.0f);
+    }
+
+    float GetFOVScale() {
+        if (Myself->IsValid()) {
+            if (Myself->IsZooming) {
+                if (Myself->TargetZoomFOV > 1.0 && Myself->TargetZoomFOV < 90.0) {
+                    return tanf(DEG2RAD(Myself->TargetZoomFOV) * (0.64285714285));
+                }
+            }
+        }
+        return 1.0;
+    }
+
+    int GetBestBone(Player* Target) {
+        float NearestDistance = 999;
+        int NearestBone = 2;
+        for (int i = 0; i < 6; i++) {
+            HitboxType Bone = static_cast<HitboxType>(i);
+            double DistanceFromCrosshair = CalculateDistanceFromCrosshair(Target->GetBonePosition(Bone));
+            if (DistanceFromCrosshair < NearestDistance) {
+                NearestBone = i;
+                NearestDistance = DistanceFromCrosshair;
+            }
+        }
+        return NearestBone;
+    }
+
+    Player* FindBestTarget() {
+        Player* NearestTarget = nullptr;
+
+        float BestDistance = 9999;
+        int BestHP = 100;
+        int BestArmor = 125;
+        float BestFOV = std::min(FOV, FOV * (GetFOVScale() * ZoomScale));
+
+        Vector3D CameraPosition = Myself->CameraPosition;
+        for (int i = 0; i < Players->size(); i++) {
+            Player* p = Players->at(i);
+            if (!IsValidTarget(p)) continue;
+            
+            if (p->DistanceToLocalPlayer < Conversion::ToGameUnits(ZoomDistance)) {
+                HitboxType BestBone = static_cast<HitboxType>(GetBestBone(p));
+                Vector3D TargetPosition = p->GetBonePosition(BestBone);
+
+                float Distance = CameraPosition.Distance(TargetPosition);
+                float FOV = CalculateDistanceFromCrosshair(TargetPosition);
+                float HP = p->Health;
+                float Armor = p->Shield;
+                
+                if (Distance > BestDistance) continue;
+                if (FOV > BestFOV) continue;
+                if (HP > BestHP) continue;
+                if (Armor > BestArmor) continue;
+
+                NearestTarget = p;
+                BestDistance = Distance;
+                BestHP = HP;
+                BestArmor = Armor;
+            }
+        }
+        return NearestTarget;
     }
 };
