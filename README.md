@@ -50,7 +50,7 @@ unknowncheats: basic knowledge and offsets
 
 **3. Clone repo**
 
-    git clone https://github.com/Nexilist/xap-client.git
+    git clone https://github.com/dese7ens/destroyapex.git
     cd xap-client
 
 **4. Build and Run**
