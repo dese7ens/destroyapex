@@ -1,4 +1,4 @@
-# xap-client
+# destroyapex
 So yeah, this thing was made by me, I was very bored so I took T_Tape's Menu and grinder's features and put them together to create this monstrosity. The code is still very messy so if you want to improve it, go ahead.
 I'll will be very grateful if you do so.
 
